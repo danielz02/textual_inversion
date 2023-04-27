@@ -496,7 +496,8 @@ class LatentDiffusion(DDPM):
 
         self.embedding_manager = self.instantiate_embedding_manager(personalization_config, self.cond_stage_model)
         self.erase_concept = kwargs.get("erase_concept", False)
-        kwargs.pop("erase_concept")
+        if "erase_concept" in kwargs:
+            kwargs.pop("erase_concept")
 
         for param in self.embedding_manager.embedding_parameters():
             param.requires_grad = True
