@@ -21,6 +21,7 @@ from pytorch_lightning.utilities import rank_zero_info
 from ldm.data.base import Txt2ImgIterableBaseDataset
 from ldm.util import instantiate_from_config
 
+
 def load_model_from_config(config, ckpt, verbose=False):
     print(f"Loading model from {ckpt}")
     pl_sd = torch.load(ckpt, map_location="cpu")
@@ -36,6 +37,7 @@ def load_model_from_config(config, ckpt, verbose=False):
         print(u)
 
     return model
+
 
 def get_parser(**parser_kwargs):
     def str2bool(v):
@@ -138,35 +140,35 @@ def get_parser(**parser_kwargs):
     )
 
     parser.add_argument(
-        "--datadir_in_name", 
-        type=str2bool, 
-        nargs="?", 
-        const=True, 
-        default=True, 
+        "--datadir_in_name",
+        type=str2bool,
+        nargs="?",
+        const=True,
+        default=True,
         help="Prepend the final directory in the data_root to the output directory name")
 
-    parser.add_argument("--actual_resume", 
-        type=str,
-        required=True,
-        help="Path to model to actually resume from")
+    parser.add_argument("--actual_resume",
+                        type=str,
+                        required=True,
+                        help="Path to model to actually resume from")
 
-    parser.add_argument("--data_root", 
-        type=str, 
-        required=True, 
-        help="Path to directory with training images")
+    parser.add_argument("--data_root",
+                        type=str,
+                        required=True,
+                        help="Path to directory with training images")
 
-    parser.add_argument("--embedding_manager_ckpt", 
-        type=str, 
-        default="", 
-        help="Initialize embedding manager from a checkpoint")
+    parser.add_argument("--embedding_manager_ckpt",
+                        type=str,
+                        default="",
+                        help="Initialize embedding manager from a checkpoint")
 
-    parser.add_argument("--placeholder_string", 
-        type=str, 
-        help="Placeholder string which will be used to denote the concept in future prompts. Overwrites the config options.")
+    parser.add_argument("--placeholder_string",
+                        type=str,
+                        help="Placeholder string which will be used to denote the concept in future prompts. Overwrites the config options.")
 
-    parser.add_argument("--init_word", 
-        type=str, 
-        help="Word to use as source for initial token embedding")
+    parser.add_argument("--init_word",
+                        type=str,
+                        help="Word to use as source for initial token embedding")
 
     return parser
 
@@ -462,6 +464,7 @@ class CUDACallback(Callback):
         except AttributeError:
             pass
 
+
 class ModeSwapCallback(Callback):
 
     def __init__(self, swap_step=2000):
@@ -477,6 +480,7 @@ class ModeSwapCallback(Callback):
         if trainer.global_step > self.swap_step and self.is_frozen:
             self.is_frozen = False
             trainer.optimizers = [pl_module.configure_opt_model()]
+
 
 if __name__ == "__main__":
     # custom parser to specify config files, train, test and debug mode,
@@ -568,7 +572,7 @@ if __name__ == "__main__":
 
         if opt.datadir_in_name:
             now = os.path.basename(os.path.normpath(opt.data_root)) + now
-            
+
         nowname = now + name + opt.postfix
         logdir = os.path.join(opt.logdir, nowname)
 
@@ -662,7 +666,7 @@ if __name__ == "__main__":
         if "modelcheckpoint" in lightning_config:
             modelckpt_cfg = lightning_config.modelcheckpoint
         else:
-            modelckpt_cfg =  OmegaConf.create()
+            modelckpt_cfg = OmegaConf.create()
         modelckpt_cfg = OmegaConf.merge(default_modelckpt_cfg, modelckpt_cfg)
         print(f"Merged modelckpt-cfg: \n{modelckpt_cfg}")
         if version.parse(pl.__version__) < version.parse('1.4.0'):
@@ -788,7 +792,7 @@ if __name__ == "__main__":
 
         def divein(*args, **kwargs):
             if trainer.global_rank == 0:
-                import pudb;
+                import pudb
                 pudb.set_trace()
 
 

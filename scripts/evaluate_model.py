@@ -79,7 +79,7 @@ if __name__ == "__main__":
     data_loader = PersonalizedBase(opt.data_dir, size=256, flip_p=0.0)
 
     images = [torch.from_numpy(data_loader[i]["image"]).permute(2, 0, 1) for i in range(data_loader.num_images)]
-    images = torch.stack(images, axis=0)
+    images = torch.stack(images, dim=0)
 
     sim_img, sim_text = evaluator.evaluate(model, images, opt.prompt)
 

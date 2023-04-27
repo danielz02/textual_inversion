@@ -129,6 +129,7 @@ per_img_token_list = [
     'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י', 'כ', 'ל', 'מ', 'נ', 'ס', 'ע', 'פ', 'צ', 'ק', 'ר', 'ש', 'ת',
 ]
 
+
 class PersonalizedBase(Dataset):
     def __init__(self,
                  data_root,
@@ -142,6 +143,7 @@ class PersonalizedBase(Dataset):
                  center_crop=False,
                  mixing_prob=0.25,
                  coarse_class_text=None,
+                 erase_concept=None,
                  ):
 
         self.data_root = data_root
@@ -150,7 +152,7 @@ class PersonalizedBase(Dataset):
 
         # self._length = len(self.image_paths)
         self.num_images = len(self.image_paths)
-        self._length = self.num_images 
+        self._length = self.num_images
 
         self.placeholder_token = placeholder_token
 
@@ -159,9 +161,13 @@ class PersonalizedBase(Dataset):
         self.mixing_prob = mixing_prob
 
         self.coarse_class_text = coarse_class_text
+        self.erase_concept = erase_concept
 
         if per_image_tokens:
-            assert self.num_images < len(per_img_token_list), f"Can't use per-image tokens when the training set contains more than {len(per_img_token_list)} tokens. To enable larger sets, add more tokens to 'per_img_token_list'."
+            assert self.num_images < len(per_img_token_list), f"Can't use per-image tokens when the training set " \
+                                                              f"contains more than {len(per_img_token_list)} tokens. " \
+                                                              f"To enable larger sets, add more tokens to " \
+                                                              f"'per_img_token_list'."
 
         if set == "train":
             self._length = self.num_images * repeats
@@ -189,20 +195,27 @@ class PersonalizedBase(Dataset):
             placeholder_string = f"{self.coarse_class_text} {placeholder_string}"
 
         if self.per_image_tokens and np.random.uniform() < self.mixing_prob:
-            text = random.choice(imagenet_dual_templates_small).format(placeholder_string, per_img_token_list[i % self.num_images])
+            text = random.choice(imagenet_dual_templates_small).format(placeholder_string,
+                                                                       per_img_token_list[i % self.num_images])
+            if self.erase_concept:
+                raise NotImplementedError()
         else:
-            text = random.choice(imagenet_templates_small).format(placeholder_string)
-            
+            if self.erase_concept:
+                text = random.choice(imagenet_templates_small).format(self.erase_concept)
+                text = f"{text} {placeholder_string}"
+            else:
+                text = random.choice(imagenet_templates_small).format(placeholder_string)
+
         example["caption"] = text
 
         # default to score-sde preprocessing
         img = np.array(image).astype(np.uint8)
-        
+
         if self.center_crop:
             crop = min(img.shape[0], img.shape[1])
             h, w, = img.shape[0], img.shape[1]
             img = img[(h - crop) // 2:(h + crop) // 2,
-                (w - crop) // 2:(w + crop) // 2]
+                  (w - crop) // 2:(w + crop) // 2]
 
         image = Image.fromarray(img)
         if self.size is not None:
