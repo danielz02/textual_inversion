@@ -1,0 +1,3 @@
+CUDA_VISIBLE_DEVICES=2,3 python main.py --base configs/stable-diffusion/v1-finetune.yaml --train yes --actual_resume models/ldm/text2img-large/sd-v1-4.ckpt -n invert-simple --gpus "0,1" --data_root img/elon/ --init_word person --logdir jobs/logs;
+export PYTHONPATH="${PYTHONPATH}:~/textual_inversion";
+CUDA_VISIBLE_DEVICES=2,3 python scripts/txt2img.py --ddim_eta 0.0 --n_samples 8 --n_iter 2 --scale 10.0 --ddim_steps 50 --embedding_path ./jobs/logs/elon_0.1/checkpoints/embeddings.pt --ckpt_path ./models/ldm/text2img-large/sd-v1-4.ckpt --prompt "a photo of elon musk";

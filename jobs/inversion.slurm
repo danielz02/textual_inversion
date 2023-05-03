@@ -1,1 +1,0 @@
-python main.py --base configs/latent-diffusion/txt2img-1p4B-finetune.yaml --train yes --actual_resume models/ldm/text2img-large/model.ckpt -n invert-simple --gpus "0,1,2,3" --data_root img/elon/ --init_word person --logdir jobs/logs

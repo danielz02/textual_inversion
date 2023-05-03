@@ -163,6 +163,8 @@ class FrozenCLIPEmbedder(AbstractEncoder):
         self.device = device
         self.max_length = max_length
 
+        print('MMMMMMMMMMMMMMMMMMMMMP Embedder')
+
         def embedding_forward(
                 self,
                 input_ids = None,

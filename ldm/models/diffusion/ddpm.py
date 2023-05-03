@@ -123,6 +123,7 @@ class DDPM(pl.LightningModule):
             self.logvar = nn.Parameter(self.logvar, requires_grad=True)
 
         print("Unused args", kwargs)
+        print('MMMMMMMMMMMMMMMMMMMMMP DDPM')
 
     def register_schedule(self, given_betas=None, beta_schedule="linear", timesteps=1000,
                           linear_start=1e-4, linear_end=2e-2, cosine_s=8e-3):
@@ -484,10 +485,12 @@ class LatentDiffusion(DDPM):
             self.restarted_from_ckpt = True
 
         if not self.unfreeze_model:
-            self.cond_stage_model.eval()
-            self.cond_stage_model.train = disabled_train
+            # self.cond_stage_model.eval()
+            # self.cond_stage_model.train = disabled_train
+            # for param in self.cond_stage_model.parameters():
+            #     param.requires_grad = False
             for param in self.cond_stage_model.parameters():
-                param.requires_grad = False
+                param.requires_grad = True
 
             self.model.eval()
             self.model.train = disabled_train
@@ -495,11 +498,18 @@ class LatentDiffusion(DDPM):
                 param.requires_grad = False
 
         self.embedding_manager = self.instantiate_embedding_manager(personalization_config, self.cond_stage_model)
+        # import pdb; pdb.set_trace()
+        
         self.erase_concept = kwargs.get("erase_concept", False)
-        kwargs.pop("erase_concept")
+        try:
+            kwargs.pop("erase_concept")
+        except:
+            pass
 
         for param in self.embedding_manager.embedding_parameters():
             param.requires_grad = True
+        
+        print('MMMMMMMMMMMMMMMMMMMMMP Model')
 
     def make_cond_schedule(self, ):
         self.cond_ids = torch.full(size=(self.num_timesteps,), fill_value=self.num_timesteps - 1, dtype=torch.long)
@@ -565,6 +575,7 @@ class LatentDiffusion(DDPM):
 
         if config.params.get("embedding_manager_ckpt", None):  # do not load if missing OR empty string
             model.load(config.params.embedding_manager_ckpt)
+            self.cond_stage_model.load(config.params.embedding_manager_ckpt.replace("embeddings", "cond_stage_model"))
 
         return model
 
@@ -1069,7 +1080,8 @@ class LatentDiffusion(DDPM):
         loss_simple = self.get_loss(model_output, target, mean=False).mean([1, 2, 3])
         loss_dict.update({f'{prefix}/loss_simple': loss_simple.mean()})
 
-        logvar_t = self.logvar[t].to(self.device)
+        # logvar_t = self.logvar[t].to(self.device)
+        logvar_t = self.logvar[t.cpu()].to(self.device)  # quick fix of same device error
         loss = loss_simple / torch.exp(logvar_t) + logvar_t
         # loss = loss_simple / torch.exp(self.logvar) + self.logvar
         if self.learn_logvar:
@@ -1084,9 +1096,15 @@ class LatentDiffusion(DDPM):
         loss += (self.original_elbo_weight * loss_vlb)
         loss_dict.update({f'{prefix}/loss': loss})
 
-        if self.erase_concept:
-            loss = - loss
+        # if self.erase_concept:
+        #     loss = -loss
 
+        # print(self.cond_stage_model.transformer.text_model.embeddings.token_embedding.weight)
+        # print([x for x in self.embedding_manager.string_to_param_dict.values()])
+        embed_loss = torch.mean(torch.cdist(self.cond_stage_model.transformer.text_model.embeddings.token_embedding.weight,
+                                [x for x in self.embedding_manager.string_to_param_dict.values()][0]))
+        loss -= 0.5 * embed_loss
+        
         if self.embedding_reg_weight > 0:
             loss_embedding_reg = self.embedding_manager.embedding_to_coarse_loss().mean()
 
@@ -1491,6 +1509,13 @@ class LatentDiffusion(DDPM):
 
     @rank_zero_only
     def on_save_checkpoint(self, checkpoint):
+        if os.path.isdir(self.trainer.checkpoint_callback.dirpath):
+            torch.save(self.cond_stage_model.state_dict(),
+                   os.path.join(self.trainer.checkpoint_callback.dirpath, f"cond_stage_model.pt"))
+            
+            torch.save(self.cond_stage_model.state_dict(),
+                   os.path.join(self.trainer.checkpoint_callback.dirpath, f"cond_stage_model_gs-{self.global_step}.pt"))
+            
 
         if not self.unfreeze_model:  # If we are not tuning the model itself, zero-out the checkpoint content to preserve memory.
             checkpoint.clear()
